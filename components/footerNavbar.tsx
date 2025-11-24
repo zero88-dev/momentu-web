@@ -1,14 +1,6 @@
-import useModals from "@/store/modals.hooks";
 import { FaCamera } from "react-icons/fa6";
 
 export const FooterNavbar = ({ openCam }: { openCam: () => void }) => {
-  const { setVisibleSearch } = useModals() as {
-    visibleSearch: boolean;
-    setVisibleSearch: (visible: boolean) => void;
-  };
-  const logout = () => {
-    localStorage.removeItem("@momentu/user");
-  };
   return (
     <nav
       className="fixed bottom-0 left-0 right-0"
@@ -20,10 +12,10 @@ export const FooterNavbar = ({ openCam }: { openCam: () => void }) => {
       <div className="flex items-center justify-center max-w-screen-xl mx-auto mb-3">
         <button
           className="p-2 hover:opacity-60 transition rounded-full"
-          onClick={openCam}
           style={{
             backgroundColor: "#FFFFFF30",
           }}
+          onClick={openCam}
         >
           <div className="w-15 h-15 bg-white rounded-full flex items-center justify-center">
             <FaCamera className="w-7 h-7" />

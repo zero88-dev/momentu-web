@@ -1,8 +1,5 @@
 "use client";
 
-import logo from "@/assets/logos/logo-dark.svg";
-import arrow from "@/assets/svg/arrow.svg";
-import { auth, database, storage } from "@/config/server";
 import { Button } from "@heroui/button";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
@@ -11,7 +8,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc, setDoc } from "firebase/firestore/lite";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useRouter, useSearchParams } from "next/navigation";
-import React from "react";
+import React, { Suspense } from "react";
 import Cropper, { Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import {
@@ -22,14 +19,15 @@ import {
   FaXmark,
 } from "react-icons/fa6";
 import Swal from "sweetalert2";
-export default function BlogPage() {
+
+import logo from "@/assets/logos/logo-dark.svg";
+import arrow from "@/assets/svg/arrow.svg";
+import { auth, database, storage } from "@/config/server";
+
+function CreateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = React.useState("");
-  const [submitted, setSubmitted] = React.useState<Record<
-    string,
-    string
-  > | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isVisible, setIsVisible] = React.useState(false);
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null);
@@ -53,10 +51,13 @@ export default function BlogPage() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
+
       reader.onloadend = () => {
         const result = reader.result as string;
+
         setImageToCrop(result);
         setShowCropModal(true);
       };
@@ -71,8 +72,11 @@ export default function BlogPage() {
   const createImage = (url: string): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
       const image = new Image();
+
       image.addEventListener("load", () => resolve(image));
-      image.addEventListener("error", (error) => reject(error));
+      image.addEventListener("error", () =>
+        reject(new Error("Failed to load image"))
+      );
       image.src = url;
     });
 
@@ -107,9 +111,11 @@ export default function BlogPage() {
       canvas.toBlob((blob) => {
         if (!blob) {
           resolve("");
+
           return;
         }
         const url = URL.createObjectURL(blob);
+
         resolve(url);
       }, "image/jpeg");
     });
@@ -122,14 +128,15 @@ export default function BlogPage() {
 
     try {
       const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels);
+
       setSelectedPhoto(croppedImage);
       setShowCropModal(false);
       setImageToCrop(null);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCroppedAreaPixels(null);
-    } catch (error) {
-      console.error("Erro ao processar imagem:", error);
+    } catch {
+      // Error processing image
     }
   };
 
@@ -163,13 +170,14 @@ export default function BlogPage() {
 
       // Fazer upload para Firebase Storage
       const storageRef = ref(storage, fileName);
+
       await uploadBytes(storageRef, blob);
 
       // Obter URL de download
       const downloadURL = await getDownloadURL(storageRef);
+
       return downloadURL;
     } catch (error) {
-      console.error("Erro ao fazer upload da foto:", error);
       throw error;
     }
   };
@@ -201,6 +209,7 @@ export default function BlogPage() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+
       return;
     }
 
@@ -222,8 +231,7 @@ export default function BlogPage() {
       if (selectedPhoto) {
         try {
           photoURL = await uploadPhoto(selectedPhoto, user.uid);
-        } catch (photoError) {
-          console.error("Erro ao fazer upload da foto:", photoError);
+        } catch {
           // Continuar mesmo se o upload da foto falhar
         }
       }
@@ -243,6 +251,7 @@ export default function BlogPage() {
         photoURL: photoURL,
         createdAt: new Date().toISOString(),
       };
+
       await setDoc(userDocRef, userData);
 
       // Salvar dados do usuário no localStorage
@@ -257,6 +266,7 @@ export default function BlogPage() {
           collection(database, "events_users"),
           idParam
         );
+
         await setDoc(
           eventUserDocRef,
           {
@@ -276,7 +286,6 @@ export default function BlogPage() {
       });
 
       // Limpar formulário após sucesso
-
       // Redirecionar para /m com o parâmetro se existir
       if (idParam) {
         router.push(`/m/${idParam}`);
@@ -286,8 +295,6 @@ export default function BlogPage() {
       setPassword("");
       setSelectedPhoto(null);
     } catch (error: any) {
-      console.error("Erro ao criar conta:", error);
-
       // Tratar erros específicos do Firebase
       let errorMessage = "Erro ao criar conta. Tente novamente.";
 
@@ -312,31 +319,30 @@ export default function BlogPage() {
     <Form
       className="w-full justify-center items-center p-5"
       validationErrors={errors}
-      onReset={() => setSubmitted(null)}
       onSubmit={onSubmit}
     >
-      <img src={logo.src} alt="Logo" width={145} height={32} className="mb-4" />
+      <img alt="Logo" className="mb-4" height={32} src={logo.src} width={145} />
 
       <div className="flex flex-col gap-4 w-full">
         {/* Campo de Foto */}
         <div className="flex flex-col items-center gap-2">
           <input
-            type="file"
             ref={fileInputRef}
             accept="image/*"
-            onChange={handleFileSelect}
             className="hidden"
+            type="file"
+            onChange={handleFileSelect}
           />
           <button
+            className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer overflow-hidden"
             type="button"
             onClick={openGallery}
-            className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer overflow-hidden"
           >
             {selectedPhoto ? (
               <img
-                src={selectedPhoto}
                 alt="Foto selecionada"
                 className="w-full h-full object-cover rounded-full"
+                src={selectedPhoto}
               />
             ) : (
               <div className="flex flex-col items-center gap-1">
@@ -346,15 +352,15 @@ export default function BlogPage() {
           </button>
           <div className="flex items-center gap-2 relative">
             <img
-              src={arrow.src}
               alt="seta"
-              width={22}
-              height={22}
               className="rotate-45 absolute"
+              height={22}
+              src={arrow.src}
               style={{
                 top: -15,
                 right: 12,
               }}
+              width={22}
             />
             <span className="text-xs text-gray-600 text-center">
               Clique aqui <br /> para {selectedPhoto ? "alterar" : "adicionar"}{" "}
@@ -397,15 +403,6 @@ export default function BlogPage() {
 
         <Input
           isRequired
-          errorMessage={getPasswordError(password)}
-          isInvalid={getPasswordError(password) !== null}
-          label="Senha"
-          labelPlacement="outside"
-          name="password"
-          placeholder="Digite sua senha"
-          type={isVisible ? "text" : "password"}
-          value={password}
-          onValueChange={setPassword}
           endContent={
             <button
               aria-label="toggle password visibility"
@@ -420,6 +417,15 @@ export default function BlogPage() {
               )}
             </button>
           }
+          errorMessage={getPasswordError(password)}
+          isInvalid={getPasswordError(password) !== null}
+          label="Senha"
+          labelPlacement="outside"
+          name="password"
+          placeholder="Digite sua senha"
+          type={isVisible ? "text" : "password"}
+          value={password}
+          onValueChange={setPassword}
         />
 
         <div className="flex gap-4 flex-col">
@@ -431,9 +437,9 @@ export default function BlogPage() {
           <Button
             className="w-full"
             color="primary"
-            type="submit"
-            isLoading={isLoading}
             disabled={isLoading}
+            isLoading={isLoading}
+            type="submit"
           >
             {isLoading ? "Criando conta..." : "Criar conta"}
           </Button>
@@ -445,17 +451,17 @@ export default function BlogPage() {
 
       {/* Modal de Crop */}
       <Modal
-        isOpen={showCropModal}
-        onClose={handleCancelCrop}
-        size="full"
         hideCloseButton
         classNames={{
           base: "bg-black",
           backdrop: "bg-black",
         }}
+        isOpen={showCropModal}
+        size="full"
+        onClose={handleCancelCrop}
       >
         <ModalContent>
-          {(onClose) => (
+          {() => (
             <div className="relative w-full h-full flex flex-col bg-black">
               <div
                 className="relative flex-1"
@@ -463,15 +469,9 @@ export default function BlogPage() {
               >
                 {imageToCrop && (
                   <Cropper
-                    image={imageToCrop}
-                    crop={crop}
-                    zoom={zoom}
                     aspect={1}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={(_, croppedAreaPixels) => {
-                      setCroppedAreaPixels(croppedAreaPixels);
-                    }}
+                    crop={crop}
+                    image={imageToCrop}
                     style={{
                       containerStyle: {
                         width: "100%",
@@ -479,6 +479,12 @@ export default function BlogPage() {
                         position: "relative",
                       },
                     }}
+                    zoom={zoom}
+                    onCropChange={setCrop}
+                    onCropComplete={(_, croppedAreaPixels) => {
+                      setCroppedAreaPixels(croppedAreaPixels);
+                    }}
+                    onZoomChange={setZoom}
                   />
                 )}
               </div>
@@ -486,27 +492,27 @@ export default function BlogPage() {
               {/* Controles */}
               <div className="flex items-center justify-between p-4 bg-black">
                 <button
-                  onClick={handleCancelCrop}
                   className="flex items-center justify-center w-12 h-12 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                  onClick={handleCancelCrop}
                 >
                   <FaXmark className="w-6 h-6 text-white" />
                 </button>
 
                 <div className="flex-1 mx-4">
                   <input
-                    type="range"
-                    min={1}
+                    className="w-full"
                     max={3}
+                    min={1}
                     step={0.1}
+                    type="range"
                     value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    className="w-full"
                   />
                 </div>
 
                 <button
-                  onClick={handleCropComplete}
                   className="flex items-center justify-center w-12 h-12 rounded-full bg-white hover:bg-white/90 transition-colors"
+                  onClick={handleCropComplete}
                 >
                   <FaCheck className="w-6 h-6 text-black" />
                 </button>
@@ -516,5 +522,13 @@ export default function BlogPage() {
         </ModalContent>
       </Modal>
     </Form>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <CreateForm />
+    </Suspense>
   );
 }

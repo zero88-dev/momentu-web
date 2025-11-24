@@ -1,9 +1,10 @@
 "use client";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore/lite";
+import { redirect, useParams } from "next/navigation";
+
 import { database } from "@/config/server";
 import useEvent from "@/store/event.hooks";
 import useFeed from "@/store/feed.hooks";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore/lite";
-import { redirect, useParams } from "next/navigation";
 
 export const useEventHooks = () => {
   const params = useParams();
@@ -33,13 +34,15 @@ export const useEventHooks = () => {
         const eventsUsersRef = doc(
           database,
           "events_users",
-          params.id as string
+          params.id as string,
         );
         const eventsUsersSnap = await getDoc(eventsUsersRef);
 
         let users = [];
+
         if (eventsUsersSnap.exists()) {
           const usersData = eventsUsersSnap.data();
+
           // Converter objeto de usuários em array
           users = Object.keys(usersData).map((userId) => ({
             id: userId,
@@ -73,6 +76,7 @@ export const useEventHooks = () => {
       const querySnapshot = await getDocs(colRef);
 
       const photosData: any[] = [];
+
       querySnapshot.forEach((doc) => {
         photosData.push({
           id: doc.id,
@@ -86,5 +90,6 @@ export const useEventHooks = () => {
       setLoading(false);
     }
   };
+
   return { getEventData, getFeed };
 };

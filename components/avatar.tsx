@@ -17,9 +17,9 @@ export const Avatar = ({
           style={{ borderRadius: "20px" }}
         >
           <img
-            src={photo || DefaultAvatar.src}
             alt={name}
             className="w-full h-full object-cover"
+            src={photo || DefaultAvatar.src}
           />
         </div>
       </div>

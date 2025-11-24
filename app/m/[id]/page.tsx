@@ -1,20 +1,18 @@
 "use client";
-import { database } from "@/config/server";
-import useEvent from "@/store/event.hooks";
-import useModals from "@/store/modals.hooks";
 import { doc, getDoc } from "firebase/firestore/lite";
 import { redirect } from "next/navigation";
 import { use, useEffect } from "react";
 import Skeleton from "react-loading-skeleton";
+
 import { Feed } from "./components/feed";
 import { Search } from "./page-search";
+
+import { database } from "@/config/server";
+import useEvent from "@/store/event.hooks";
+import useModals from "@/store/modals.hooks";
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { setDataEvent, setLoading, loading, setParticipants } = useEvent() as {
-    setDataEvent: (data: any) => void;
-    setLoading: (loading: boolean) => void;
-    loading: boolean;
-  };
+  const { setDataEvent, setLoading, loading, setParticipants } = useEvent();
   const { visibleSearch, setVisibleSearch } = useModals() as {
     visibleSearch: boolean;
     setVisibleSearch: (visible: boolean) => void;
@@ -34,28 +32,31 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         const eventsUsersRef = doc(database, "events_users", id);
         const eventsUsersSnap = await getDoc(eventsUsersRef);
 
-        let users = [];
         if (eventsUsersSnap.exists()) {
           const usersData = eventsUsersSnap.data();
+
           // Converter objeto de usuários em array
-          users = Object.keys(usersData).map((userId) => ({
+          const users = Object.keys(usersData).map((userId) => ({
             id: userId,
             ...usersData[userId],
           }));
+
           setParticipants(users);
         }
 
         if (data) {
           setDataEvent({
             id,
+            title: data.title || "",
+            image: data.image,
             ...data,
           });
         }
       } else {
         redirect("/404");
       }
-    } catch (error) {
-      console.error("Erro ao buscar dados do evento:", error);
+    } catch {
+      // Error fetching event data
     } finally {
       setLoading(false);
     }
@@ -63,12 +64,12 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
   useEffect(() => {
     getEventData();
-  }, []);
+  }, [id]);
 
   return (
     <div>
-      {loading ? <Skeleton height={300} count={3} /> : <Feed eventId={id} />}
-      <Search isOpen={visibleSearch} close={() => setVisibleSearch(false)} />
+      {loading ? <Skeleton count={3} height={300} /> : <Feed eventId={id} />}
+      <Search close={() => setVisibleSearch(false)} isOpen={visibleSearch} />
     </div>
   );
 }

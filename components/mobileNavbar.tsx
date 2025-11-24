@@ -1,12 +1,14 @@
 "use client";
+import Image from "next/image";
+import Skeleton from "react-loading-skeleton";
+
 import background from "@/assets/images/backgroundHeader.png";
 import logo from "@/assets/logos/logo-white.svg";
 import footer from "@/assets/svg/footerHeaderBackgorund.svg";
 import useEvent from "@/store/event.hooks";
-import Image from "next/image";
-import Skeleton from "react-loading-skeleton";
 export const MobileNavbar = () => {
   const { dataEvent, loading } = useEvent();
+
   return (
     <>
       <header
@@ -26,13 +28,13 @@ export const MobileNavbar = () => {
             alignItems: "center",
           }}
         >
-          <Image src={logo} alt="logo" width={100} height={100} className="" />
+          <Image alt="logo" className="" height={100} src={logo} width={100} />
         </div>
         <Image
-          src={footer}
           alt="logo"
-          style={{ width: "100%", position: "absolute", bottom: 0 }}
           className="w-full"
+          src={footer}
+          style={{ width: "100%", position: "absolute", bottom: 0 }}
         />
       </header>
       <div
@@ -44,7 +46,7 @@ export const MobileNavbar = () => {
         }}
       >
         {loading ? (
-          <Skeleton width={140} height={17} />
+          <Skeleton height={17} width={140} />
         ) : (
           <span className="text-sm font-bold">{dataEvent.title}</span>
         )}

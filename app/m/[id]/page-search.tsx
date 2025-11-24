@@ -8,7 +8,7 @@ export const Search = ({
   isOpen: boolean;
   close: () => void;
 }) => (
-  <Modal isOpen={isOpen} size={"full"} onClose={close} hideCloseButton>
+  <Modal hideCloseButton isOpen={isOpen} size={"full"} onClose={close}>
     <ModalContent
       style={{
         padding: 0,
@@ -18,7 +18,14 @@ export const Search = ({
     >
       <div
         className="flex items-center justify-start px-2 py-4 text-white"
+        role="button"
+        tabIndex={0}
         onClick={close}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            close();
+          }
+        }}
       >
         <TbChevronLeft className="w-7 h-7" />
       </div>
@@ -43,7 +50,6 @@ export const Search = ({
         >
           <span className="text-sm font-bold">Insira o código do álbum</span>
           <input
-            type="text"
             className="text-sm font-bold bg-transparent text-center border-none outline-none"
             style={{
               backgroundColor: "#ffffff30",
@@ -52,6 +58,7 @@ export const Search = ({
               width: "100%",
               textTransform: "uppercase",
             }}
+            type="text"
           />
         </div>
         <Button className="w-full" color="primary" size="lg">

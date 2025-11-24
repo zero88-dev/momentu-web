@@ -13,7 +13,7 @@ import {
  */
 export function getTimeAgo(
   date: Date | string | undefined,
-  suffix: string = ""
+  suffix: string = "",
 ): string {
   if (!date) {
     return "agora";

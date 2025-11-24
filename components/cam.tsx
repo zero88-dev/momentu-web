@@ -1,7 +1,5 @@
 "use client";
 
-import { database, storage } from "@/config/server";
-import { useEventHooks } from "@/hooks/useEventHooks";
 import { Input } from "@heroui/input";
 import { Modal, ModalContent } from "@heroui/modal";
 import { addDoc, collection } from "firebase/firestore/lite";
@@ -15,12 +13,14 @@ import {
   FaXmark,
 } from "react-icons/fa6";
 import Webcam from "react-webcam";
+
+import { database, storage } from "@/config/server";
+import { useEventHooks } from "@/hooks/useEventHooks";
 export const Cam = ({
   isOpen,
   onClose,
 }: {
   isOpen: boolean;
-  close: () => void;
   onClose: () => void;
 }) => {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -38,17 +38,20 @@ export const Cam = ({
   const getUserData = () => {
     try {
       const userDataStr = localStorage.getItem("@momentu/user");
+
       if (userDataStr) {
         return JSON.parse(userDataStr);
       }
-    } catch (error) {
-      console.error("Erro ao ler dados do usuário do localStorage:", error);
+    } catch {
+      // Error reading user data from localStorage
     }
+
     return null;
   };
 
   const handleCapture = () => {
     const imageSrc = webcamRef.current?.getScreenshot();
+
     if (imageSrc) {
       setCapturedPhoto(imageSrc);
     }
@@ -71,6 +74,7 @@ export const Cam = ({
 
       // Fazer upload para Firebase Storage
       const storageRef = ref(storage, fileName);
+
       await uploadBytes(storageRef, blob);
 
       // Obter URL de download
@@ -88,28 +92,24 @@ export const Cam = ({
       }
 
       // Criar documento no Firestore
-      const docRef = await addDoc(
-        collection(database, `feed/${eventId}/photos`),
-        {
-          likes: 0,
-          time: new Date().toISOString(),
-          title: description,
-          photo: photoUrl,
-          user: {
-            id: userData.uid || userData.id,
-            name: userData.name,
-            photo: userData.photoURL,
-          },
-        }
-      );
+      await addDoc(collection(database, `feed/${eventId}/photos`), {
+        likes: 0,
+        time: new Date().toISOString(),
+        title: description,
+        photo: photoUrl,
+        user: {
+          id: userData.uid || userData.id,
+          name: userData.name,
+          photo: userData.photoURL,
+        },
+      });
 
       await getEventData();
       await getFeed();
       setCapturedPhoto(null);
       setDescription("");
       onClose();
-    } catch (error) {
-      console.error("Erro ao enviar foto:", error);
+    } catch {
       alert("Erro ao enviar foto. Tente novamente.");
     } finally {
       setIsUploading(false);
@@ -127,10 +127,13 @@ export const Cam = ({
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
+
       reader.onloadend = () => {
         const result = reader.result as string;
+
         setCapturedPhoto(result);
       };
       reader.readAsDataURL(file);
@@ -146,51 +149,69 @@ export const Cam = ({
   };
 
   return (
-    <Modal isOpen={isOpen} size={"full"} onClose={onClose} hideCloseButton>
+    <Modal hideCloseButton isOpen={isOpen} size={"full"} onClose={onClose}>
       <ModalContent style={{ padding: 0 }}>
-        {(onClose) => (
+        {() => (
           <>
             {capturedPhoto ? (
               <div className="relative w-full h-full flex flex-col p-2  bg-black">
                 <div
                   className="p-1 rounded-full absolute top-4 left-4"
+                  role="button"
                   style={{
                     backgroundColor: "#FFFFFFcc",
                     border: "1px solid #FFFFFF30",
+                    cursor: "pointer",
                   }}
+                  tabIndex={0}
                   onClick={handleCancel}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      handleCancel();
+                    }
+                  }}
                 >
                   <FaXmark className="w-5 h-5 text-black" />
                 </div>
                 <img
-                  src={capturedPhoto}
                   alt="Foto capturada"
                   className="w-full h-full object-cover rounded-2xl"
                   height={window.innerHeight}
+                  src={capturedPhoto}
                 />
                 <div className="flex items-center gap-2 my-4">
                   <Input
-                    placeholder="Adicione uma legenda..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
                     className="flex-1 rounded-full"
-                    radius="full"
                     classNames={{
                       input: "text-white",
                       inputWrapper: "bg-white/20 border-white/30",
                     }}
+                    placeholder="Adicione uma legenda..."
+                    radius="full"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                   />
                   <div
                     className="p-2 rounded-full"
+                    role="button"
                     style={{
                       backgroundColor: isUploading ? "#FFFFFF80" : "#FFFFFFF2",
                       border: "1px solid #FFFFFF30",
                       cursor: isUploading ? "not-allowed" : "pointer",
                     }}
+                    tabIndex={isUploading ? -1 : 0}
                     onClick={isUploading ? undefined : handleSend}
+                    onKeyDown={(e) => {
+                      if (
+                        !isUploading &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        handleSend();
+                      }
+                    }}
                   >
                     {isUploading ? (
-                      <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <FaArrowRight className="w-6 h-6 text-black" />
                     )}
@@ -203,24 +224,24 @@ export const Cam = ({
                 style={{ padding: 0 }}
               >
                 <input
-                  type="file"
                   ref={fileInputRef}
                   accept="image/*"
-                  onChange={handleFileSelect}
                   className="hidden"
+                  type="file"
+                  onChange={handleFileSelect}
                 />
                 <Webcam
                   key={facingMode}
                   ref={webcamRef}
                   audio={false}
-                  mirrored={true}
                   className="w-full h-full object-cover"
                   height={window.innerHeight}
+                  mirrored={true}
                   screenshotFormat="image/jpeg"
-                  width={window.innerWidth}
                   videoConstraints={{
                     facingMode: facingMode,
                   }}
+                  width={window.innerWidth}
                 />
                 <div className="flex items-center justify-between absolute bottom-0 w-full px-4 mb-4">
                   <button
@@ -235,7 +256,7 @@ export const Cam = ({
                     style={{ backgroundColor: "#FFFFFF30" }}
                     onClick={handleCapture}
                   >
-                    <div className="w-14 h-14 bg-white rounded-full"></div>
+                    <div className="w-14 h-14 bg-white rounded-full" />
                   </button>
                   <button
                     className="rounded-full p-3 flex items-center justify-center"

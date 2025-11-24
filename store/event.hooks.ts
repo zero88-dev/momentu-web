@@ -14,6 +14,7 @@ interface EventState {
   loading: boolean;
   setDataEvent: (data: EventState["dataEvent"]) => void;
   setLoading: (loading: boolean) => void;
+  setParticipants: (participants: EventState["participants"]) => void;
 }
 const useEvent = create<EventState>((set) => ({
   dataEvent: {

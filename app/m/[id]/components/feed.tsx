@@ -1,17 +1,17 @@
 "use client";
 
-import { Avatar } from "@/components/avatar";
-import { database } from "@/config/server";
-import useFeed from "@/store/feed.hooks";
 import { collection, doc, getDocs, updateDoc } from "firebase/firestore/lite";
 import { useEffect, useState } from "react";
 import { TbCloudDownload, TbHeart } from "react-icons/tb";
+
+import { Avatar } from "@/components/avatar";
+import { database } from "@/config/server";
+import useFeed from "@/store/feed.hooks";
 
 export const Feed = ({ eventId }: { eventId: string }) => {
   const [likedItems, setLikedItems] = useState<
     Record<string | number, boolean>
   >({});
-  const [loading, setLoading] = useState<boolean>(false);
   const { dataFeed, setDataFeed } = useFeed() as {
     dataFeed: any;
     setDataFeed: (data: any) => void;
@@ -19,14 +19,14 @@ export const Feed = ({ eventId }: { eventId: string }) => {
   const handleDoubleClick = async (itemId: string | number) => {
     const colRef = doc(database, `feed/${eventId}/photos`, itemId as string);
     const wasLiked = !likedItems[itemId];
+
     try {
       // 2. Use updateDoc to apply partial updates
       await updateDoc(colRef, {
         likes: wasLiked,
       });
-      console.log("Document successfully updated!");
-    } catch (error) {
-      console.error("Error updating document: ", error);
+    } catch {
+      // Error updating document
     }
 
     setLikedItems((prev) => ({
@@ -41,24 +41,25 @@ export const Feed = ({ eventId }: { eventId: string }) => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
+
       link.href = url;
       link.download = `${title || "image"}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Erro ao baixar a imagem:", error);
+    } catch {
+      // Error downloading image
     }
   };
 
   const getFeed = async () => {
-    setLoading(true);
     try {
       const colRef = collection(database, `feed/${eventId}/photos`);
       const querySnapshot = await getDocs(colRef);
 
       const photosData: any[] = [];
+
       querySnapshot.forEach((doc) => {
         photosData.push({
           id: doc.id,
@@ -70,15 +71,13 @@ export const Feed = ({ eventId }: { eventId: string }) => {
       photosData.sort((a, b) => {
         const timeA = a.time?.toDate ? a.time.toDate() : new Date(a.time);
         const timeB = b.time?.toDate ? b.time.toDate() : new Date(b.time);
+
         return timeB.getTime() - timeA.getTime(); // Ordem decrescente (mais recente primeiro)
       });
 
-      console.log("🚀 ~ getFeed ~ photosData:", photosData);
       setDataFeed(photosData);
-    } catch (error) {
-      console.error("Erro ao buscar feed:", error);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Error fetching feed
     }
   };
 
@@ -88,11 +87,10 @@ export const Feed = ({ eventId }: { eventId: string }) => {
 
   return (
     <div className="w-full h-full">
-      {dataFeed?.map((item, index) => (
+      {dataFeed?.map((item: any, index: number) => (
         <div
           key={item.id}
           className="relative"
-          onDoubleClick={() => handleDoubleClick(item.id)}
           style={{
             borderRadius: "38px",
             marginTop: index > 0 ? "-40px" : "0px",
@@ -104,21 +102,22 @@ export const Feed = ({ eventId }: { eventId: string }) => {
                 }
               : {}),
           }}
+          onDoubleClick={() => handleDoubleClick(item.id)}
         >
           <img
-            src={item.photo}
             alt={item?.title || ""}
             className="w-full h-122 object-cover"
+            src={item.photo}
             style={{
               borderRadius: "38px",
               borderBottomLeftRadius: "0px",
               borderBottomRightRadius: "0px",
             }}
-          ></img>
+          />
           <div className="absolute bottom-0 left-0 right-0 p-4 h-full flex flex-col justify-between">
             <Avatar
-              photo={item.user.photo}
               name={item.user.name}
+              photo={item.user.photo}
               time={item.time}
             />
             <div
@@ -141,12 +140,20 @@ export const Feed = ({ eventId }: { eventId: string }) => {
               >
                 <div
                   className="flex flex-row items-center gap-2"
+                  role="button"
                   style={{
                     borderRadius: "20px",
                     padding: "6px 12px",
                     backgroundColor: "#FFFFFF30",
+                    cursor: "pointer",
                   }}
+                  tabIndex={0}
                   onClick={() => handleDoubleClick(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      handleDoubleClick(item.id);
+                    }
+                  }}
                 >
                   <TbHeart
                     className={`w-5 h-5 ${likedItems[item.id] ? "text-red-500" : "text-white"}`}
@@ -160,12 +167,19 @@ export const Feed = ({ eventId }: { eventId: string }) => {
                   </span>
                 </div>
                 <div
-                  onClick={() => handleDownload(item.photo, item.title)}
+                  role="button"
                   style={{
                     borderRadius: "20px",
                     padding: "6px",
                     backgroundColor: "#FFFFFF30",
                     cursor: "pointer",
+                  }}
+                  tabIndex={0}
+                  onClick={() => handleDownload(item.photo, item.title)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      handleDownload(item.photo, item.title);
+                    }
                   }}
                 >
                   <TbCloudDownload className="w-6 h-6 text-white" />
