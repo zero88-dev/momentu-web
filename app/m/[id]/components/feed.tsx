@@ -1,6 +1,13 @@
 "use client";
 
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore/lite";
+import {
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore/lite";
 import { useEffect, useState } from "react";
 import { TbCloudDownload, TbHeart } from "react-icons/tb";
 
@@ -12,46 +19,70 @@ export const Feed = ({ eventId }: { eventId: string }) => {
   const [likedItems, setLikedItems] = useState<
     Record<string | number, boolean>
   >({});
+  const [isLiked, setIsLiked] = useState<string | null>(null);
   const { dataFeed, setDataFeed } = useFeed() as {
     dataFeed: any;
     setDataFeed: (data: any) => void;
   };
   const handleDoubleClick = async (itemId: string | number) => {
-    const colRef = doc(database, `feed/${eventId}/photos`, itemId as string);
-    const wasLiked = !likedItems[itemId];
-
     try {
-      // 2. Use updateDoc to apply partial updates
-      await updateDoc(colRef, {
-        likes: wasLiked,
-      });
-    } catch {
-      // Error updating document
-    }
+      setIsLiked(itemId as string);
+      setTimeout(() => {
+        setIsLiked(null);
+      }, 1000);
+      const userDataStr = localStorage.getItem("@momentu/user");
+      if (!userDataStr) {
+        console.error("Usuário não autenticado");
+        return;
+      }
 
-    setLikedItems((prev) => ({
-      ...prev,
-      [itemId]: !prev[itemId],
-    }));
+      const userData = JSON.parse(userDataStr);
+      const userId = userData.uid || userData.id;
+
+      if (!userId) {
+        console.error("ID do usuário não encontrado");
+        return;
+      }
+
+      // Obter o item atual do feed para verificar se já tem like
+      const currentItem = dataFeed?.find((item: any) => item.id === itemId);
+      const currentLikes = currentItem?.likes || [];
+      const isCurrentlyLiked = currentLikes.includes(userId);
+
+      // Atualizar estado local otimisticamente
+      setLikedItems((prev) => ({
+        ...prev,
+        [itemId]: !isCurrentlyLiked,
+      }));
+
+      // Atualizar no Firestore
+      const docRef = doc(database, `feed/${eventId}/photos`, itemId as string);
+
+      if (isCurrentlyLiked) {
+        // Remover o ID do usuário do array de likes
+        await updateDoc(docRef, {
+          likes: arrayRemove(userId),
+        });
+      } else {
+        // Adicionar o ID do usuário ao array de likes
+        await updateDoc(docRef, {
+          likes: arrayUnion(userId),
+        });
+      }
+
+      // Recarregar o feed para refletir as mudanças
+      await getFeed();
+    } catch (error) {
+      console.error("Erro ao atualizar like:", error);
+      // Reverter o estado local em caso de erro
+      setLikedItems((prev) => ({
+        ...prev,
+        [itemId]: !prev[itemId],
+      }));
+    }
   };
 
-  const handleDownload = async (imageUrl: string, title: string) => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${title || "image"}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch {
-      // Error downloading image
-    }
-  };
+  const handleDownload = async (imageUrl: string, title: string) => {};
 
   const getFeed = async () => {
     try {
@@ -81,10 +112,29 @@ export const Feed = ({ eventId }: { eventId: string }) => {
     }
   };
 
+  // Inicializar estado de likes baseado nos dados do feed
+  useEffect(() => {
+    if (dataFeed && dataFeed.length > 0) {
+      const userDataStr = localStorage.getItem("@momentu/user");
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        const userId = userData.uid || userData.id;
+
+        if (userId) {
+          const initialLikedItems: Record<string | number, boolean> = {};
+          dataFeed.forEach((item: any) => {
+            const likes = item.likes || [];
+            initialLikedItems[item.id] = likes.includes(userId);
+          });
+          setLikedItems(initialLikedItems);
+        }
+      }
+    }
+  }, [dataFeed]);
+
   useEffect(() => {
     getFeed();
   }, [eventId]);
-
   return (
     <div className="w-full h-full">
       {dataFeed?.map((item: any, index: number) => (
@@ -104,6 +154,14 @@ export const Feed = ({ eventId }: { eventId: string }) => {
           }}
           onDoubleClick={() => handleDoubleClick(item.id)}
         >
+          {isLiked === item.id && (
+            <div className="absolute top-0 right-0 w-full h-full flex items-center justify-center animate-ping">
+              <TbHeart
+                className={`w-30 h-30 ${likedItems[item.id] ? "text-red-500" : "text-white"}`}
+                fill={"currentColor"}
+              />
+            </div>
+          )}
           <img
             alt={item?.title || ""}
             className="w-full h-122 object-cover"
@@ -160,10 +218,8 @@ export const Feed = ({ eventId }: { eventId: string }) => {
                     fill={"currentColor"}
                   />
                   <span className="text-white text-sm">
-                    {likedItems[item.id]
-                      ? item?.likes?.length + 1
-                      : item?.likes?.length}{" "}
-                    Likes
+                    {item?.likes?.length || 0} Like
+                    {(item?.likes?.length || 0) === 1 ? "" : "s"}
                   </span>
                 </div>
                 <div

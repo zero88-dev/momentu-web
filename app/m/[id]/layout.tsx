@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Cam } from "@/components/cam";
 import { FooterNavbar } from "@/components/footerNavbar";
 import { MobileNavbar } from "@/components/mobileNavbar";
-import { Party } from "@/components/party";
 import "react-loading-skeleton/dist/skeleton.css";
 
 export default function MobileLayout({
@@ -30,9 +29,9 @@ export default function MobileLayout({
           : null;
 
       if (id) {
-        router.push(`/create?id=${id}`);
+        router.push(`/auth?id=${id}`);
       } else {
-        router.push("/create");
+        router.push("/auth");
       }
     }
   }, [pathname, router]);
@@ -42,7 +41,6 @@ export default function MobileLayout({
       <MobileNavbar />
 
       <main className="overflow-y-auto pb-16 w-full">
-        <Party />
         <div className="inline-block w-full justify-center">{children}</div>
       </main>
       <FooterNavbar openCam={() => setIsOpen(true)} />

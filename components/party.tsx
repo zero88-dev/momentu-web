@@ -1,4 +1,5 @@
 "use client";
+import DefaultAvatar from "@/assets/images/default-avatar.jpg";
 import Skeleton from "react-loading-skeleton";
 
 import useEvent from "@/store/event.hooks";
@@ -27,7 +28,11 @@ const MemberPhoto = ({
           className="w-full h-full  border-1 border-default overflow-hidden"
           style={{ borderRadius: "18px" }}
         >
-          <img alt={name} className="w-full h-full object-cover" src={photo} />
+          <img
+            alt={name}
+            className="w-full h-full object-cover"
+            src={photo || DefaultAvatar.src}
+          />
         </div>
       </div>
       <span className="text-xs mt-1 max-w-[64px] truncate">{name}</span>

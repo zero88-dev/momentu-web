@@ -7,6 +7,7 @@ import Skeleton from "react-loading-skeleton";
 import { Feed } from "./components/feed";
 import { Search } from "./page-search";
 
+import { Party } from "@/components/party";
 import { database } from "@/config/server";
 import useEvent from "@/store/event.hooks";
 import useModals from "@/store/modals.hooks";
@@ -68,6 +69,7 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div>
+      <Party />
       {loading ? <Skeleton count={3} height={300} /> : <Feed eventId={id} />}
       <Search close={() => setVisibleSearch(false)} isOpen={visibleSearch} />
     </div>

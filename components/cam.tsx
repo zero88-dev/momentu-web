@@ -93,7 +93,7 @@ export const Cam = ({
 
       // Criar documento no Firestore
       await addDoc(collection(database, `feed/${eventId}/photos`), {
-        likes: 0,
+        likes: [],
         time: new Date().toISOString(),
         title: description,
         photo: photoUrl,
@@ -223,6 +223,20 @@ export const Cam = ({
                 className="flex flex-col items-center justify-center h-full relative"
                 style={{ padding: 0 }}
               >
+                <div
+                  className="p-1 rounded-full absolute top-4 left-4"
+                  role="button"
+                  style={{
+                    backgroundColor: "#FFFFFFcc",
+                    border: "1px solid #FFFFFF30",
+                    cursor: "pointer",
+                    zIndex: 2,
+                  }}
+                  tabIndex={0}
+                  onClick={onClose}
+                >
+                  <FaXmark className="w-5 h-5 text-black" />
+                </div>
                 <input
                   ref={fileInputRef}
                   accept="image/*"
