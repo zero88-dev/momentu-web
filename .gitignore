@@ -38,3 +38,8 @@ pnpm-lock.yaml
 yarn.lock
 package-lock.json
 bun.lockb
+
+# PWA generated files (these are generated during build)
+/public/sw.js
+/public/workbox-*.js
+/public/fallback-*.js

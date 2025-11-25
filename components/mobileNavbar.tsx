@@ -6,13 +6,14 @@ import background from "@/assets/images/backgroundHeader.png";
 import logo from "@/assets/logos/logo-white.svg";
 import footer from "@/assets/svg/footerHeaderBackgorund.svg";
 import useEvent from "@/store/event.hooks";
+import { PWAInstaller } from "./pwa-installer";
 export const MobileNavbar = () => {
   const { dataEvent, loading } = useEvent();
 
   return (
     <>
       <header
-        className="py-3 bg-primary w-full h-25 w-full"
+        className="py-3 bg-primary w-full min-h-25"
         style={{
           backgroundImage: `url(${background.src})`,
           backgroundSize: "cover",
@@ -21,6 +22,7 @@ export const MobileNavbar = () => {
           position: "relative",
         }}
       >
+        <PWAInstaller />
         <div
           style={{
             display: "flex",

@@ -24,6 +24,7 @@ export const Cam = ({
   onClose: () => void;
 }) => {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [facingMode, setFacingMode] = useState<"user" | "environment">(
     "environment"
@@ -49,11 +50,86 @@ export const Cam = ({
     return null;
   };
 
+  const compressImage = async (
+    blob: Blob,
+    maxWidth: number = 1920,
+    maxHeight: number = 1920,
+    maxSizeMB: number = 1
+  ): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+
+        // Calcular novas dimensões mantendo proporção
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = width * ratio;
+          height = height * ratio;
+        }
+
+        // Criar canvas e redimensionar
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          resolve(blob);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Comprimir com qualidade progressiva até ficar abaixo do tamanho máximo
+        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+        let quality = 0.9;
+
+        const compress = () => {
+          canvas.toBlob(
+            (compressedBlob) => {
+              if (!compressedBlob) {
+                resolve(blob);
+                return;
+              }
+
+              // Se o tamanho estiver OK ou qualidade muito baixa, retornar
+              if (compressedBlob.size <= maxSizeBytes || quality <= 0.1) {
+                resolve(compressedBlob);
+              } else {
+                // Reduzir qualidade e tentar novamente
+                quality -= 0.1;
+                compress();
+              }
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+
+        compress();
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(blob);
+      };
+
+      img.src = url;
+    });
+  };
+
   const handleCapture = () => {
     const imageSrc = webcamRef.current?.getScreenshot();
 
     if (imageSrc) {
       setCapturedPhoto(imageSrc);
+      setOriginalFile(null); // Foto da câmera não é HEIC
     }
   };
 
@@ -64,9 +140,56 @@ export const Cam = ({
 
     setIsUploading(true);
     try {
-      // Converter base64 para blob
-      const response = await fetch(capturedPhoto);
-      const blob = await response.blob();
+      let blob: Blob;
+
+      // Se temos o arquivo original e é HEIC, converter para JPG
+      if (originalFile) {
+        const isHeic =
+          originalFile.type === "image/heic" ||
+          originalFile.type === "image/heif" ||
+          originalFile.type === "image/heic-sequence" ||
+          originalFile.type === "image/heif-sequence" ||
+          originalFile.name.toLowerCase().endsWith(".heic") ||
+          originalFile.name.toLowerCase().endsWith(".heif");
+
+        if (isHeic) {
+          try {
+            // Importar heic2any dinamicamente (apenas no cliente)
+            const heic2anyModule = await import("heic2any");
+            const heic2any = heic2anyModule.default || heic2anyModule;
+
+            // Converter HEIC para JPEG
+            const converted = await heic2any({
+              blob: originalFile,
+              toType: "image/jpeg",
+              quality: 0.92,
+            });
+
+            // heic2any retorna um array de blobs, pegar o primeiro
+            blob = Array.isArray(converted) ? converted[0] : converted;
+
+            if (!blob) {
+              throw new Error("Falha ao converter HEIC para JPEG");
+            }
+          } catch (error) {
+            console.error("Erro ao converter HEIC:", error);
+            // Se falhar a conversão, tentar usar o base64
+            const response = await fetch(capturedPhoto);
+            blob = await response.blob();
+          }
+        } else {
+          // Arquivo não é HEIC, converter base64 para blob
+          const response = await fetch(capturedPhoto);
+          blob = await response.blob();
+        }
+      } else {
+        // Foto da câmera ou sem arquivo original, converter base64 para blob
+        const response = await fetch(capturedPhoto);
+        blob = await response.blob();
+      }
+
+      // Comprimir imagem se necessário (redimensionar e comprimir para < 1MB)
+      blob = await compressImage(blob, 1920, 1920, 1);
 
       // Criar nome único para o arquivo
       const timestamp = new Date().toISOString();
@@ -107,9 +230,11 @@ export const Cam = ({
       await getEventData();
       await getFeed();
       setCapturedPhoto(null);
+      setOriginalFile(null);
       setDescription("");
       onClose();
-    } catch {
+    } catch (error) {
+      console.error("Erro ao enviar foto:", error);
       alert("Erro ao enviar foto. Tente novamente.");
     } finally {
       setIsUploading(false);
@@ -118,6 +243,7 @@ export const Cam = ({
 
   const handleCancel = () => {
     setCapturedPhoto(null);
+    setOriginalFile(null);
     setDescription("");
   };
 
@@ -125,19 +251,71 @@ export const Cam = ({
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
+    if (!file || !file.type.startsWith("image/")) {
+      return;
+    }
 
+    // Verificar se é HEIC
+    const isHeic =
+      file.type === "image/heic" ||
+      file.type === "image/heif" ||
+      file.type === "image/heic-sequence" ||
+      file.type === "image/heif-sequence" ||
+      file.name.toLowerCase().endsWith(".heic") ||
+      file.name.toLowerCase().endsWith(".heif");
+
+    // Armazenar arquivo original para conversão no envio se necessário
+    setOriginalFile(file);
+
+    if (isHeic) {
+      try {
+        // Importar heic2any dinamicamente (apenas no cliente)
+        const heic2anyModule = await import("heic2any");
+        const heic2any = heic2anyModule.default || heic2anyModule;
+
+        // Converter HEIC para JPEG usando heic2any
+        const converted = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.92,
+        });
+
+        // heic2any retorna um array de blobs, pegar o primeiro
+        const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+
+        if (!jpegBlob) {
+          throw new Error("Falha ao converter HEIC para JPEG");
+        }
+
+        // Converter blob para base64 para preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setCapturedPhoto(result);
+        };
+        reader.onerror = () => {
+          throw new Error("Erro ao ler arquivo convertido");
+        };
+        reader.readAsDataURL(jpegBlob);
+      } catch (error) {
+        console.error("Erro ao converter HEIC:", error);
+        alert("Erro ao converter imagem HEIC para JPG. Tente novamente.");
+      }
+    } else {
+      // Arquivo não é HEIC, usar normalmente
+      const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-
         setCapturedPhoto(result);
       };
       reader.readAsDataURL(file);
     }
+
     // Resetar o input para permitir selecionar o mesmo arquivo novamente
     if (fileInputRef.current) {
       fileInputRef.current.value = "";

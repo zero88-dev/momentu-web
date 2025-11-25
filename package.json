@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "@heroui/accordion": "2.2.24",
@@ -56,6 +57,7 @@
     "date-fns": "^4.1.0",
     "firebase": "^12.6.0",
     "framer-motion": "11.18.2",
+    "heic2any": "^0.0.4",
     "intl-messageformat": "10.7.16",
     "next": "15.3.1",
     "next-themes": "0.4.6",
@@ -91,9 +93,11 @@
     "eslint-plugin-react-hooks": "5.2.0",
     "eslint-plugin-unused-imports": "4.1.4",
     "globals": "16.0.0",
+    "next-pwa": "^5.6.0",
     "postcss": "8.5.6",
     "prettier": "3.5.3",
     "sass": "^1.94.2",
+    "sharp": "^0.34.5",
     "tailwind-variants": "3.1.1",
     "tailwindcss": "4.1.11",
     "typescript": "5.6.3"

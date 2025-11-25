@@ -18,6 +18,33 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   icons: {
     icon: "/favicon.ico",
+    apple: "/icons/icon-192x192.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: siteConfig.name,
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: siteConfig.name,
+    title: {
+      default: siteConfig.name,
+      template: `%s - ${siteConfig.name}`,
+    },
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: "summary",
+    title: {
+      default: siteConfig.name,
+      template: `%s - ${siteConfig.name}`,
+    },
+    description: siteConfig.description,
   },
 };
 
@@ -26,6 +53,11 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -34,12 +66,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html suppressHydrationWarning lang="en">
+    <html suppressHydrationWarning lang="pt-BR">
       <head />
       <body
         className={clsx(
           "min-h-screen text-foreground bg-background font-sans antialiased",
-          fontSans.variable,
+          fontSans.variable
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
