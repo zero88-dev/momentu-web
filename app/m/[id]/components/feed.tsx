@@ -9,13 +9,14 @@ import {
   updateDoc,
 } from "firebase/firestore/lite";
 import { useEffect, useState } from "react";
-import { TbCloudDownload, TbHeart } from "react-icons/tb";
+import { TbCloudDownload, TbHeart, TbLoader2 } from "react-icons/tb";
 
 import { Avatar } from "@/components/avatar";
 import { database } from "@/config/server";
 import useFeed from "@/store/feed.hooks";
 
 export const Feed = ({ eventId }: { eventId: string }) => {
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [likedItems, setLikedItems] = useState<
     Record<string | number, boolean>
   >({});
@@ -82,7 +83,16 @@ export const Feed = ({ eventId }: { eventId: string }) => {
     }
   };
 
-  const handleDownload = async (imageUrl: string, title: string) => {};
+  const handleDownload = async (url: string, filename: string) => {
+    setDownloadingId(url);
+
+    const link = document.createElement("a");
+    link.href = `/api/download?url=${encodeURIComponent(url)}&filename=${filename}.jpg`;
+    link.click();
+    setTimeout(() => {
+      setDownloadingId(null);
+    }, 1000);
+  };
 
   const getFeed = async () => {
     try {
@@ -238,7 +248,11 @@ export const Feed = ({ eventId }: { eventId: string }) => {
                     }
                   }}
                 >
-                  <TbCloudDownload className="w-6 h-6 text-white" />
+                  {downloadingId === item.photo ? (
+                    <TbLoader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <TbCloudDownload className="w-6 h-6 text-white" />
+                  )}
                 </div>
               </div>
             </div>

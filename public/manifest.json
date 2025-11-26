@@ -3,6 +3,7 @@
   "short_name": "Momentu",
   "description": "Momentum é uma plataforma de mídia social para compartilhar fotos e vídeos.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
