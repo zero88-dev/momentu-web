@@ -16,6 +16,7 @@ export default function MobileLayout({
   const onClose = () => setIsOpen(false);
   const pathname = usePathname();
   const router = useRouter();
+  const isRecapPage = pathname?.includes("/recap");
 
   useEffect(() => {
     const userData = localStorage.getItem("@momentu/user");
@@ -38,12 +39,12 @@ export default function MobileLayout({
 
   return (
     <section className="flex flex-col items-center justify-center">
-      <MobileNavbar />
+      {!isRecapPage && <MobileNavbar />}
 
-      <main className="overflow-y-auto pb-16 w-full">
+      <main className={`overflow-y-auto w-full ${!isRecapPage ? "pb-16" : ""}`}>
         <div className="inline-block w-full justify-center">{children}</div>
       </main>
-      <FooterNavbar openCam={() => setIsOpen(true)} />
+      {!isRecapPage && <FooterNavbar openCam={() => setIsOpen(true)} />}
       <Cam isOpen={isOpen} onClose={onClose} />
     </section>
   );

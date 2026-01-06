@@ -11,11 +11,15 @@ import {
 import { useEffect, useState } from "react";
 import { TbCloudDownload, TbHeart, TbLoader2 } from "react-icons/tb";
 
+import { useRouter } from "next/navigation";
+
 import { Avatar } from "@/components/avatar";
 import { database } from "@/config/server";
 import useFeed from "@/store/feed.hooks";
+import { Button } from "@heroui/button";
 
 export const Feed = ({ eventId }: { eventId: string }) => {
+  const router = useRouter();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [likedItems, setLikedItems] = useState<
     Record<string | number, boolean>
@@ -147,6 +151,15 @@ export const Feed = ({ eventId }: { eventId: string }) => {
   }, [eventId]);
   return (
     <div className="w-full h-full">
+      <div className="flex items-center justify-center m-4 ">
+        <Button
+          className="w-full"
+          color="primary"
+          onPress={() => router.push(`/m/${eventId}/recap`)}
+        >
+          VISUALIZAR RECAP
+        </Button>
+      </div>
       {dataFeed?.map((item: any, index: number) => (
         <div
           key={item.id}
